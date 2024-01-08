@@ -1,0 +1,598 @@
+"use strict";
+
+/**
+ *
+ * @author Stefan Kendlbacher
+ * @date 2009-01-10
+ * @desc
+ * @name color_manager
+ */
+var color_manager = function(){
+
+    var controller = constants.CONTROLLER, current_hsv, current_rgb, current_left_right = 0, current_up_down = 0, steps = 0, gradient_steps = 8, that = {
+        color_bg_id: "mycolorpicker",
+        drag_element_id: "draggable",
+        stop_function: null,
+        drag_function: null,
+        hsb: {
+            h: 0,
+            s: 100,
+            b: 100
+        },
+        hex: null,
+        rgb: null,
+        plus_id: "plus",
+        minus_id: "minus"
+    }, step_value_2 = {/*solution with background*/
+        "-6": [100, 2],/*[S,B]*/
+        "-5": [100, 27],
+        "-4": [100, 49],
+        "-3": [100, 63],
+        "-2": [100, 77],
+        "-1": [100, 93],
+        "0": [100, 100],
+        "1": [89, 100],
+        "2": [74, 100],
+        "3": [58, 100],
+        "4": [32, 100],
+        "5": [8, 100],
+        "6": [0, 100]
+    }, step_value = {/*solution with background*/
+        "-6": [100, 10],/*[S,B]*/
+        "-5": [100, 25],
+        "-4": [100, 40],
+        "-3": [100, 55],
+        "-2": [100, 70],
+        "-1": [100, 85],
+        "0": [100, 100],
+        "1": [85, 100],
+        "2": [70, 100],
+        "3": [55, 100],
+        "4": [40, 100],
+        "5": [25, 100],
+        "6": [10, 100]
+    }, variation = {
+        100: 0,
+        80: 1,
+        60: 2,
+        40: 3,
+        20: 4
+    }, color_bg_position = {
+        "-6": "0px",
+        "-5": "-10px",
+        "-4": "-20px",
+        "-3": "-30px",
+        "-2": "-40px",
+        "-1": "-50px",
+        "0": "-60px",
+        "1": "-70px",
+        "2": "-80px",
+        "3": "-90px",
+        "4": "-100px",
+        "5": "-110px",
+        "6": "-120px"
+    }, steps_to_lis = {
+        "-6": 0,
+        "-5": 1,
+        "-4": 2,
+        "-3": 3,
+        "-2": 4,
+        "-1": 5,
+        "0": 6,
+        "1": 7,
+        "2": 8,
+        "3": 9,
+        "4": 10,
+        "5": 11,
+        "6": 12
+    };
+    
+    var init = function(params){
+    
+    
+        var bg_image = new Image();
+        bg_image.src = constants.ADRESS + "assets/images/background_colorselection.png";
+        $(bg_image).load(function(){
+            $("#color_selection").fadeIn();
+            
+            
+            
+            
+            //received from PHP ... -> /red/105/green/93/blue/78
+            if (typeof params.rgb !== "undefined") {
+            
+                that.rgb = params.rgb;
+                that.hsb = RGBToHSB(params.rgb);
+            }
+            
+            
+            
+            $("#" + that.plus_id).click(function(){
+                _set_sat_val(current_left_right + 1, current_up_down);
+            });
+            
+            $("#" + that.minus_id).click(function(){
+                _set_sat_val(current_left_right - 1, current_up_down);
+            });
+            
+            //create drag element
+            var coords = $("#" + that.color_bg_id).offset();
+            var dragger = $("<div>").addClass("drag").attr("id", that.drag_element_id).appendTo("#" + that.color_bg_id).draggable({
+                grid: [10, 0],
+                cursorAt: {
+                    left: 5
+                },
+                distance: 10,
+                containment: 'parent',
+                drag: drag_cb,
+                stop: stop_cb
+            });
+            
+            //init value set by b -6 - 0
+            
+            var left_right, up_down, max, min;
+            
+            
+            var up_down_steps = 100 / gradient_steps;
+            max = 100 - up_down_steps;
+            min = up_down_steps;
+            var haystack = [];
+            for (i = min; i < max; i++) {
+                haystack.push(Math.round(i)); /*haystack is NOT exact*/
+            }
+            
+            //search to mark received color
+            if (in_array(that.hsb.s, haystack) === false) {
+                if (that.hsb.s < min) {
+                    up_down = 1;
+                }
+                else {
+                    up_down = up_down_steps;
+                }
+            }
+            else {
+                up_down = Math.round(that.hsb.s / up_down_steps)
+            }
+            /* up_down : e.g. 87.5 */
+            //
+            
+            
+            var left_right_steps = 15;
+            
+            min = step_value[-6][1];
+            max = step_value[0][1];
+            
+            haystack = [];
+            for (i = min; i < max; i++) {
+                haystack.push(i);
+            }
+            if (in_array(that.hsb.b, haystack) === false) {
+                if (that.hsb.b < min) {
+                    left_right = min;
+                }
+                else {
+                    left_right = max;
+                }
+            }
+            else {
+                left_right = Math.round(that.hsb.b / left_right_steps)
+            }
+			
+            /*console.debug(up_down);
+             console.debug(left_right);
+             */
+             dragger.css("left", Math.round(parseInt(that.hsb.h) / 18 * 42));
+            
+            _set_color();
+			
+            _get_images_html(1, that.hsb, that.rgb);
+			
+            _show_color_variations();
+            _set_selected_color();
+            
+            /**
+             * set current_up_down & current_left_right
+             */
+            _set_sat_val(left_right - 1, up_down);
+            
+            $("#color_var li:visible").eq(current_left_right).find("ul").show();
+            
+            
+            /* current_up_down : e.g. 87.5 
+             console.debug($("li", ".s_variation:visible,.b_variation:visible"));
+             console.debug(current_up_down);*/
+            /**
+             * quick & dirty
+             * FIXME : gradient_steps - current_up_down -1
+             */
+            $("li", ".s_variation:visible,.b_variation:visible").eq(gradient_steps - current_up_down - 1).addClass("current");
+        });
+        
+    };
+    /**
+     *
+     * @param {Object} event
+     * @param {Object} ui
+     */
+    var stop_cb = function(event, ui){
+        _get_images_html(1, that.hsb, that.rgb);
+    };
+    /**
+     *
+     * @param {Object} event
+     * @param {Object} ui
+     */
+    var drag_cb = function(event, ui){
+    
+    
+    
+        if (typeof ui.position == "undefined") {
+            ui.position = {};
+            ui.position.left = ui.value;
+        }
+        
+        //42 entspricht 18° - festgesetzt durch graphik...        
+        that.hsb = {
+            h: Math.round((parseInt(ui.position.left) / 42 * 18)),
+            s: that.hsb.s,
+            b: that.hsb.b
+        };
+        
+        _set_color();
+        _show_color_variations();
+        _set_selected_color();
+        
+    };
+    /**
+     *
+     */
+    var _show_color_variations = function(){
+        $("#color_var").empty();
+        
+        //chrome workaround - sorts -6 ....
+        var numbers = [-6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6];
+        
+        for (var i = 0; i < numbers.length; i++) {
+        
+        
+            my_i = numbers[i];
+            var show = false;
+            /**
+             * not enough color-values -  have to change this ...
+             */
+            if (my_i == -5 || my_i == -3 || my_i == 0 || my_i == 3 || my_i == 4) {
+                show = true;
+            }
+            
+            show = true;
+            
+            if (show) {
+                var hsv_variations = {};
+                
+                
+                hsv_variations.h = that.hsb.h;
+                hsv_variations.s = step_value[my_i][0];
+                hsv_variations.b = step_value[my_i][1];
+                
+                var rgb = HSBToRGB(hsv_variations);
+                
+                var li = $("<li />").css("background", "#" + RGBToHex(rgb)).html("&nbsp;").appendTo("#color_var").bind("click", {
+                    "value": my_i,
+                    "rgb": rgb,
+                    "hsv": hsv_variations
+                }, function(e){
+                    $(this).siblings().find("ul").hide();
+                    $(this).find("ul").show();
+                    _set_sat_val(e.data.value, 100);
+                    _get_images_html(1, e.data.hsv, e.data.rgb);
+                }).hover(function(){
+					$(this).siblings().find("ul:visible").hide();
+                    $(this).find("ul:hidden").show();
+                }, function(){
+                    $(this).find("ul:visible").hide();
+                });
+                
+                if (my_i == 0) {
+                    li.addClass("main_color");
+                }
+                
+                var ul_s = false, ul_b = false, lis = [];
+                var new_hsv = hsv_variations;
+                
+                var gsteps = 100 / gradient_steps;
+                
+                ul_s = $("<ul />").addClass("s_variation");
+                for (var j = (100 - gsteps); j >= gsteps; j -= gsteps) {
+                
+                    if (my_i < 0) {
+                    
+                        var param_hsv = {
+                            h: hsv_variations.h,
+                            s: j,
+                            b: hsv_variations.b
+                        };
+                    }
+                    else 
+                        if (my_i === 0) {
+                            var param_hsv = {
+                                h: hsv_variations.h,
+                                s: j,
+                                b: j
+                            };
+                        }
+                        else {
+                            var param_hsv = {
+                                h: hsv_variations.h,
+                                s: hsv_variations.s,
+                                b: j
+                            };
+                        }
+                    var param_rgb = HSBToRGB(param_hsv);
+                    
+                    
+                    var s_li = $("<li>").css("background", "#" + RGBToHex(param_rgb)).html("&nbsp;").bind("click", {
+                        "value": my_i,
+                        "variation": j,
+                        "rgb": param_rgb,
+                        "hsv": param_hsv
+                    }, function(e){
+                        if (e.stopPropagation) 
+                            e.stopPropagation();
+                        
+                        $(this).siblings().removeClass("current");
+                        $(this).addClass("current");
+                        that.hsb = e.data.hsv;
+                        _set_sat_val(e.data.value, e.data.variation);
+                        _get_images_html(1, e.data.hsv, e.data.rgb);
+                    });
+                    lis.push(s_li);
+                }
+				
+				
+				try {
+					$.each(lis,function(i,item){
+						$(item).appendTo(ul_s);
+					});
+				}catch(e){
+					console.debug(e);
+				}
+                
+                if (ul_s) {
+                    ul_s.hide();
+                    $(ul_s).appendTo(li);
+                }
+                
+                
+            }
+        }
+    };
+    
+    /**
+     *
+     * @param {Object} page
+     * @param {Object} hsv_variations
+     * @param {Object} rgb
+     */
+    var _get_images_html = function(page, hsv_variations, rgb){
+    
+        current_hsv = hsv_variations;
+        current_rgb = rgb;
+        
+        $.post(controller, {
+            "action": "get_images_by_color",
+            // "h": hsv_variations.h,
+            // "s": hsv_variations.s,
+            // "v": hsv_variations.b,
+            "r": rgb.r,
+            "g": rgb.g,
+            "b": rgb.b,
+            "page": page
+        }, function(response){
+            $("#bilder").html(response.images);
+            set_navigation_listener();
+            _set_color();
+            _set_selected_color();
+            
+            
+            
+        }, "json");
+        
+        
+    };
+    
+    /**
+     *
+     */
+    var set_navigation_listener = function(){
+    
+        $(".inside a").click(function(e){
+            e.preventDefault();
+            var page = $(this).attr("href").split("-")[1];
+            
+            _get_images_html(page, current_hsv, current_rgb);
+        });
+        
+    };
+    var _set_color = function(){
+        that.rgb = HSBToRGB(that.hsb);
+        that.hex = RGBToHex(HSBToRGB(that.hsb));
+    };
+    
+    /**
+     *
+     */
+    var _set_selected_color = function(){
+		
+        $("#color_value div:eq(1)").html("rgb(" + that.rgb.r + "," + that.rgb.g + "," + that.rgb.b + ")");
+        $("#color_value div:eq(2)").html("#" + that.hex);
+        $("#color_value div:eq(3)").html("hsl(" + that.hsb.h + "," + that.hsb.s + "," + that.hsb.b + ")");
+        $("#color_value div:eq(4)").css("background", "#" + that.hex);
+        $("#mycolorpicker").parent().css("background-color", "#" + that.hex);
+        
+        $("#permalink").html($("<a>").attr({
+            "href": constants.ADRESS + "album/farben/r/" + that.rgb.r + "/g/" + that.rgb.g +"/b/" + that.rgb.b +"/",
+            "title": "Farben"
+        }).html("Permanentlink für diese Auswahl"));
+        
+    };
+    
+    
+    var _set_sat_val = function(left_right, up_down){
+    
+    
+    
+        if (left_right == "minus") {
+        
+            if (current_left_right > -6) {
+                current_left_right -= 1;
+            }
+            else {
+                current_left_right = 6;
+            }
+        }
+        else 
+            if (left_right == "plus") {
+                if (current_left_right < 6) {
+                    current_left_right += 1;
+                }
+                else {
+                    current_left_right = -6;
+                }
+            }
+            else {
+                current_left_right = parseInt(left_right);
+            }
+        
+        current_up_down = up_down;
+        
+        
+        
+        
+    };
+    
+    /**
+     *
+     * @param {Object} hsb
+     */
+    var HSBToRGB = function(hsb){
+        var rgb = {};
+        var h = Math.round(hsb.h);
+        var s = Math.round(hsb.s * 255 / 100);
+        var v = Math.round(hsb.b * 255 / 100);
+        if (s == 0) {
+            rgb.r = rgb.g = rgb.b = v;
+        }
+        else {
+            var t1 = v;
+            var t2 = (255 - s) * v / 255;
+            var t3 = (t1 - t2) * (h % 60) / 60;
+            if (h == 360) 
+                h = 0;
+            if (h < 60) {
+                rgb.r = t1;
+                rgb.b = t2;
+                rgb.g = t2 + t3
+            }
+            else 
+                if (h < 120) {
+                    rgb.g = t1;
+                    rgb.b = t2;
+                    rgb.r = t1 - t3
+                }
+                else 
+                    if (h < 180) {
+                        rgb.g = t1;
+                        rgb.r = t2;
+                        rgb.b = t2 + t3
+                    }
+                    else 
+                        if (h < 240) {
+                            rgb.b = t1;
+                            rgb.r = t2;
+                            rgb.g = t1 - t3
+                        }
+                        else 
+                            if (h < 300) {
+                                rgb.b = t1;
+                                rgb.g = t2;
+                                rgb.r = t2 + t3
+                            }
+                            else 
+                                if (h < 360) {
+                                    rgb.r = t1;
+                                    rgb.g = t2;
+                                    rgb.b = t1 - t3
+                                }
+                                else {
+                                    rgb.r = 0;
+                                    rgb.g = 0;
+                                    rgb.b = 0
+                                }
+        }
+        return {
+            r: Math.round(rgb.r),
+            g: Math.round(rgb.g),
+            b: Math.round(rgb.b)
+        };
+    };
+    /**
+     *
+     * @param {Object} rgb
+     */
+    var RGBToHex = function(rgb){
+        var hex = [rgb.r.toString(16), rgb.g.toString(16), rgb.b.toString(16)];
+        $.each(hex, function(nr, val){
+            if (val.length == 1) {
+                hex[nr] = '0' + val;
+            }
+        });
+        return hex.join('');
+    };
+    var RGBToHSB = function(rgb){
+        var hsb = {
+            h: 0,
+            s: 0,
+            b: 0
+        };
+        var min = Math.min(rgb.r, rgb.g, rgb.b);
+        var max = Math.max(rgb.r, rgb.g, rgb.b);
+        var delta = max - min;
+        hsb.b = max;
+        if (max != 0) {
+        
+        }
+        hsb.s = max != 0 ? 255 * delta / max : 0;
+        if (hsb.s != 0) {
+            if (rgb.r == max) {
+                hsb.h = (rgb.g - rgb.b) / delta;
+            }
+            else 
+                if (rgb.g == max) {
+                    hsb.h = 2 + (rgb.b - rgb.r) / delta;
+                }
+                else {
+                    hsb.h = 4 + (rgb.r - rgb.g) / delta;
+                }
+        }
+        else {
+            hsb.h = -1;
+        }
+        hsb.h *= 60;
+        if (hsb.h < 0) {
+            hsb.h += 360;
+        }
+        hsb.s *= 100 / 255;
+        hsb.b *= 100 / 255;
+        
+        //SKEN
+        hsb.h = Math.round(hsb.h);
+        hsb.s = Math.round(hsb.s);
+        hsb.b = Math.round(hsb.b);
+        //
+        
+        return hsb;
+    };
+    
+    that.init = init;
+    return that;
+};

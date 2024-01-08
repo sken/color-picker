@@ -1,0 +1,155 @@
+body {
+    color: #333;
+    font-size: 62.5%;
+    font-family: georgia, "times new roman", times, serif;
+    line-height: 1.5em;
+    margin: 0;
+    padding: 0;
+    text-align: center;
+}
+
+#mycolorpicker {
+    height: 20px;
+    width: 840px;
+    background: url(images/mycolorpicker_bg.png) 0px -60px;
+}
+
+
+div.drag {
+    width: 20px;
+    height: 30px;
+    cursor: pointer;
+    background: url(images/magnifier.png);
+    position: relative;
+    top: -11px;
+}
+
+#selected_color {
+    position: relative;
+    top: -1px;
+    padding: 4px;
+    width: 832px;
+    z-index: 1;
+}
+
+#selected_color ul {
+    width: 75px;
+    background: #fff;
+    font-size: 11px;
+    margin: 0;
+    padding: 0;
+    text-indent: 4px;
+    line-height: 18px;
+}
+
+#selected_color ul li {
+    list-style-type: none;
+}
+
+#color_var {
+    position: relative;
+    padding: 0;
+    margin: 0;
+}
+
+#color_var li {
+    cursor: pointer;
+    margin-top: 2px;
+    list-style-type: none;
+    float: left;
+    display: block;
+    width: 64px;
+    height: 20px;
+    border-right: 1px solid #fff;
+    border-bottom: 1px solid #fff;
+}
+
+#color_var li:first-child {
+    width: 62px;
+}
+
+#color_var li:last-child {
+    width: 62px;
+    border-right: none;
+}
+
+#color_var li.main_color {
+    margin-top: -3px;
+    margin-left: -2px;
+    height: 28px;
+    border: 2px solid #fff;
+}
+
+#color_var li.main_color ul {
+    margin-top: 9px;
+}
+
+#color_var li ul li:first-child, #color_var li ul li:last-child {
+    width: 64px;
+}
+
+#color_var .b_variation li, #color_var .s_variation li {
+    margin-top: 0px;
+    border-left: 1px solid #FFFFFF;
+    height: 15px;
+}
+
+#color_var .b_variation li.current, #color_var .s_variation li.current {
+    margin-left: -2px;
+    border: 3px solid #000;
+}
+
+#color_var .b_variation li:hover, #color_var .s_variation li:hover {
+    margin-left: -2px;
+    border-left: 3px solid #000;
+    border-right: 3px solid #000;
+}
+
+.b_variation, .s_variation {
+    background: #f7f7f7;
+    padding: 1px;
+    position: relative;
+    width: 64px;
+    left: -2px;
+    top: 1px;
+}
+
+#color_var li, #color_var li.main_color {
+    position: relative;
+    z-index: 2;
+}
+
+#color_selection {
+    padding-top: 72px;
+    padding-left: 18px;
+    width: 880px;
+    height: 110px;
+    background: url(images/background_colorselection.png) no-repeat;
+    display: none;
+}
+
+
+
+#color_related ul {
+    margin: 0;
+    padding: 0;
+}
+
+#color_related ul li {
+    width: 15px;
+    height: 15px;
+    padding-left: 15px;
+    border: 1px solid #ccc;
+    margin-right: 5px;
+    list-style-type: none;
+    display: inline;
+}
+
+#color_values div {
+    border: 1px solid #ccc;
+    width: 20px;
+    height: 20px;
+    float: left;
+    margin: 1px;
+    cursor: pointer;
+}

@@ -1,0 +1,19 @@
+{
+  "name": "color-picker",
+  "version": "0.0.1",
+  "source": "src/color_manager.js",
+  "main": "dist/main.js",
+  "scripts": {
+    "watch": "parcel watch",
+    "build": "parcel build",
+    "test": "jest"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "parcel": "^2.11.0"
+  },
+  "dependencies": {
+    "jquery": "^1.12.4",
+    "jquery-ui": "^1.13.2"
+  }
+}
